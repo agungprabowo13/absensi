@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Absensi QR</title>
+<style>
+:root{--bg:#0e1a2b;--panel:#162740;--line:#2a3f5e;--teks:#eef3fa;--redup:#93a6c2;--ok:#2bd48a;--warn:#ffb020;--err:#ff6b6b}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--teks);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px}
+#jam{font-size:2rem;font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+#tgl{color:var(--redup);font-size:.9rem}
+button{font:inherit;color:var(--teks);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+main{flex:1;display:flex;flex-direction:column;gap:14px;padding:0 18px 18px;min-height:0}
+.cam{position:relative;flex:1;min-height:200px;background:#000;border-radius:16px;overflow:hidden;border:1px solid var(--line)}
+video{width:100%;height:100%;object-fit:cover}
+.bingkai{position:absolute;inset:18% 18%;border:3px solid rgba(255,255,255,.85);border-radius:18px;pointer-events:none}
+#hasil{border-radius:16px;padding:18px;background:var(--panel);border:2px solid var(--line);text-align:center;min-height:110px;display:flex;flex-direction:column;justify-content:center}
+#hasil b{display:block;font-size:1.7rem;line-height:1.2}
+#hasil span{color:var(--redup)}
+#hasil.ok{border-color:var(--ok)}#hasil.ok b{color:var(--ok)}
+#hasil.warn{border-color:var(--warn)}#hasil.warn b{color:var(--warn)}
+#hasil.err{border-color:var(--err)}#hasil.err b{color:var(--err)}
+#q{color:var(--warn);font-size:.85rem;text-align:center;min-height:1.2em}
+dialog{margin:auto;width:min(92vw,440px);background:var(--panel);color:var(--teks);border:1px solid var(--line);border-radius:16px;padding:20px}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+label{display:block;margin:12px 0 4px;color:var(--redup);font-size:.9rem}
+input,select{width:100%;font:inherit;color:var(--teks);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px}
+.baris{display:flex;gap:10px;margin-top:18px;justify-content:flex-end}
+.utama{background:var(--ok);color:#06231a;border-color:var(--ok);font-weight:700}
+@media (prefers-reduced-motion:no-preference){#hasil{transition:border-color .2s}}
+</style>
+</head>
+<body>
+<header>
+  <div><div id="jam">--:--:--</div><div id="tgl"></div></div>
+  <button id="btnSet" aria-label="Pengaturan">Pengaturan</button>
+</header>
+<main>
+  <div class="cam"><video id="v" playsinline muted></video><div class="bingkai"></div></div>
+  <div id="hasil"><b>Arahkan QR ke kamera</b><span>Absen masuk dicatat otomatis</span></div>
+  <div id="q" role="status"></div>
+</main>
+
+<dialog id="dlg">
+  <h2 style="font-size:1.2rem">Pengaturan</h2>
+  <label for="url">URL Web App (dari Apps Script)</label>
+  <input id="url" type="url" placeholder="https://script.google.com/macros/s/.../exec">
+  <label for="token">Token rahasia</label>
+  <input id="token" type="password" autocomplete="off">
+  <label for="facing">Kamera</label>
+  <select id="facing"><option value="user">Depan</option><option value="environment">Belakang</option></select>
+  <div class="baris"><button id="batal">Tutup</button><button id="simpan" class="utama">Simpan</button></div>
+</dialog>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const ld = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+const sv = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+let cfg = ld('absen_cfg', {}); cfg.facing = cfg.facing || 'user';
+let queue = ld('absen_q', []);
+let last = { id: '', t: 0 }, busy = false, resetT;
+
+// jam
+setInterval(() => {
+  const d = new Date();
+  $('#jam').textContent = d.toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
+  $('#tgl').textContent = d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}, 1000);
+
+function tampil(kelas, judul, sub) {
+  const h = $('#hasil'); h.className = kelas;
+  h.innerHTML = '<b></b><span></span>';
+  h.querySelector('b').textContent = judul;
+  h.querySelector('span').textContent = sub || '';
+  clearTimeout(resetT);
+  if (kelas !== 'wait') resetT = setTimeout(() => {
+    h.className = ''; h.innerHTML = '<b>Arahkan QR ke kamera</b><span>Absen masuk dicatat otomatis</span>';
+  }, 4000);
+}
+function simpanAntrean() { sv('absen_q', queue); $('#q').textContent = queue.length ? queue.length + ' absen menunggu dikirim ke spreadsheet' : ''; }
+
+async function kirim(item) {
+  // tanpa header khusus agar tidak memicu preflight CORS di Apps Script
+  const r = await fetch(cfg.url, { method: 'POST', body: JSON.stringify({ token: cfg.token, id: item.id, ts: item.ts }) });
+  return r.json();
+}
+
+function tanggapi(j) {
+  if (j.status === 'OK') tampil('ok', j.nama, 'Masuk pukul ' + String(j.jam).slice(0, 5));
+  else if (j.status === 'SUDAH') tampil('warn', j.nama, 'Sudah absen hari ini pukul ' + String(j.jam).slice(0, 5));
+  else tampil('err', j.pesan || 'Gagal mencatat', 'Coba lagi atau hubungi admin');
+}
+
+async function onCode(id) {
+  const now = Date.now();
+  if (busy || (id === last.id && now - last.t < 5000)) return;
+  last = { id, t: now }; busy = true;
+  if (navigator.vibrate) navigator.vibrate(80);
+  if (!cfg.url || !cfg.token) { tampil('err', 'Pengaturan belum diisi', 'Buka Pengaturan, isi URL dan token'); busy = false; return; }
+  tampil('wait', 'Memproses…', id);
+  const item = { id, ts: new Date().toISOString() };
+  try { tanggapi(await kirim(item)); }
+  catch { queue.push(item); simpanAntrean(); tampil('warn', 'Tersimpan di HP', 'Akan dikirim saat internet kembali'); }
+  busy = false;
+}
+
+async function kirimAntrean() {
+  if (!queue.length || !cfg.url || !navigator.onLine) return;
+  for (const item of [...queue]) {
+    try {
+      const j = await kirim(item);
+      if (j.status === 'TOKEN') break;           // token salah: simpan, jangan buang
+      queue = queue.filter(x => x !== item); simpanAntrean();
+    } catch { break; }
+  }
+}
+addEventListener('online', kirimAntrean); setInterval(kirimAntrean, 30000);
+
+// kamera + pemindai
+let stream;
+async function mulaiKamera() {
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: cfg.facing, width: { ideal: 1280 } }, audio: false });
+    const v = $('#v'); v.srcObject = stream; await v.play(); loop();
+  } catch (e) {
+    tampil('err', 'Kamera tidak bisa dibuka', 'Izinkan akses kamera di Chrome. Jika dibuka dari file, coba lewat HTTPS (GitHub Pages).');
+  }
+}
+const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
+let lastScan = 0;
+function loop(ts) {
+  requestAnimationFrame(loop);
+  const v = $('#v');
+  if (!v.videoWidth || ts - lastScan < 150) return;
+  lastScan = ts;
+  const w = 480, h = Math.round(w * v.videoHeight / v.videoWidth);
+  cv.width = w; cv.height = h; cx.drawImage(v, 0, 0, w, h);
+  const c = jsQR(cx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: 'dontInvert' });
+  if (c && c.data) onCode(c.data.trim());
+}
+
+// pengaturan
+$('#btnSet').onclick = () => { $('#url').value = cfg.url || ''; $('#token').value = cfg.token || ''; $('#facing').value = cfg.facing; $('#dlg').showModal(); };
+$('#batal').onclick = () => $('#dlg').close();
+$('#simpan').onclick = () => {
+  cfg = { url: $('#url').value.trim(), token: $('#token').value.trim(), facing: $('#facing').value };
+  sv('absen_cfg', cfg); $('#dlg').close(); mulaiKamera(); kirimAntrean();
+};
+
+simpanAntrean(); mulaiKamera();
+if (!cfg.url) $('#btnSet').click();
+</script>
+</body>
+</html>
