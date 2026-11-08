@@ -37,7 +37,6 @@ input,select{width:100%;font:inherit;color:var(--teks);background:var(--bg);bord
 <body>
 <header>
   <div><div id="jam">--:--:--</div><div id="tgl"></div></div>
-  <button id="btnSet" aria-label="Pengaturan">Pengaturan</button>
 </header>
 <main>
   <div class="cam"><video id="v" playsinline muted></video><div class="bingkai"></div></div>
@@ -46,23 +45,13 @@ input,select{width:100%;font:inherit;color:var(--teks);background:var(--bg);bord
   <div id="info" style="text-align:center;color:var(--redup);font-size:.75rem"></div>
 </main>
 
-<dialog id="dlg">
-  <h2 style="font-size:1.2rem">Pengaturan</h2>
-  <label for="url">URL Web App (dari Apps Script)</label>
-  <input id="url" type="url" placeholder="https://script.google.com/macros/s/.../exec">
-  <label for="token">Token rahasia</label>
-  <input id="token" type="password" autocomplete="off">
-  <label for="facing">Kamera</label>
-  <select id="facing"><option value="user">Depan</option><option value="environment">Belakang</option></select>
-  <div class="baris"><button id="batal">Tutup</button><button id="simpan" class="utama">Simpan</button></div>
-</dialog>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const ld = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const sv = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
-let cfg = ld('absen_cfg', {}); cfg.facing = cfg.facing || 'user';
+// ISI URL Web App Anda di bawah ini (satu kali saja). facing: 'user' = kamera depan, 'environment' = kamera belakang
+const cfg = { url: 'https://script.google.com/macros/s/AKfycbwMg5MhoNwhjnFHuLisY1sy8tjZ-zEnVJ56_RGoJUSOVXf9kfxn77t8MjzPbt_JmWjnig/exec', facing: 'user' };
 let queue = ld('absen_q', []);
 let last = { id: '', t: 0 }, busy = false, resetT;
 
@@ -87,7 +76,7 @@ function simpanAntrean() { sv('absen_q', queue); $('#q').textContent = queue.len
 
 async function kirim(item) {
   // tanpa header khusus agar tidak memicu preflight CORS di Apps Script
-  const r = await fetch(cfg.url, { method: 'POST', body: JSON.stringify({ token: cfg.token, id: item.id, ts: item.ts }) });
+  const r = await fetch(cfg.url, { method: 'POST', body: JSON.stringify({ id: item.id, ts: item.ts }) });
   return r.json();
 }
 
@@ -102,7 +91,7 @@ async function onCode(id) {
   if (busy || (id === last.id && now - last.t < 5000)) return;
   last = { id, t: now }; busy = true;
   if (navigator.vibrate) navigator.vibrate(80);
-  if (!cfg.url || !cfg.token) { tampil('err', 'Pengaturan belum diisi', 'Buka Pengaturan, isi URL dan token'); busy = false; return; }
+  if (!cfg.url || cfg.url.startsWith('PASTE')) { tampil('err', 'URL Web App belum diisi', 'Isi URL di baris atas script file index.html'); busy = false; return; }
   tampil('wait', 'Memproses…', id);
   const item = { id, ts: new Date().toISOString() };
   try { tanggapi(await kirim(item)); }
@@ -135,7 +124,7 @@ async function mulaiKamera() {
 }
 const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
 const detektor = ('BarcodeDetector' in window) ? new BarcodeDetector({ formats: ['qr_code'] }) : null;
-$('#info').textContent = 'v2 · pemindai: ' + (detektor ? 'bawaan Chrome' : (typeof jsQR !== 'undefined' ? 'jsQR' : 'BELUM DIMUAT'));
+$('#info').textContent = 'v4 · pemindai: ' + (detektor ? 'bawaan Chrome' : (typeof jsQR !== 'undefined' ? 'jsQR' : 'BELUM DIMUAT'));
 let lastScan = 0, sedangBaca = false, pesanSiap = false;
 async function loop(ts) {
   requestAnimationFrame(loop);
@@ -160,16 +149,7 @@ async function loop(ts) {
   sedangBaca = false;
 }
 
-// pengaturan
-$('#btnSet').onclick = () => { $('#url').value = cfg.url || ''; $('#token').value = cfg.token || ''; $('#facing').value = cfg.facing; $('#dlg').showModal(); };
-$('#batal').onclick = () => $('#dlg').close();
-$('#simpan').onclick = () => {
-  cfg = { url: $('#url').value.trim(), token: $('#token').value.trim(), facing: $('#facing').value };
-  sv('absen_cfg', cfg); $('#dlg').close(); mulaiKamera(); kirimAntrean();
-};
-
 simpanAntrean(); mulaiKamera();
-if (!cfg.url) $('#btnSet').click();
 </script>
 </body>
 </html>
