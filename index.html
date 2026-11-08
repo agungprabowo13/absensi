@@ -43,6 +43,7 @@ input,select{width:100%;font:inherit;color:var(--teks);background:var(--bg);bord
   <div class="cam"><video id="v" playsinline muted></video><div class="bingkai"></div></div>
   <div id="hasil"><b>Arahkan QR ke kamera</b><span>Absen masuk dicatat otomatis</span></div>
   <div id="q" role="status"></div>
+  <div id="info" style="text-align:center;color:var(--redup);font-size:.75rem"></div>
 </main>
 
 <dialog id="dlg">
@@ -133,16 +134,30 @@ async function mulaiKamera() {
   }
 }
 const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
-let lastScan = 0;
-function loop(ts) {
+const detektor = ('BarcodeDetector' in window) ? new BarcodeDetector({ formats: ['qr_code'] }) : null;
+$('#info').textContent = 'v2 · pemindai: ' + (detektor ? 'bawaan Chrome' : (typeof jsQR !== 'undefined' ? 'jsQR' : 'BELUM DIMUAT'));
+let lastScan = 0, sedangBaca = false, pesanSiap = false;
+async function loop(ts) {
   requestAnimationFrame(loop);
   const v = $('#v');
-  if (!v.videoWidth || ts - lastScan < 150) return;
-  lastScan = ts;
-  const w = 480, h = Math.round(w * v.videoHeight / v.videoWidth);
-  cv.width = w; cv.height = h; cx.drawImage(v, 0, 0, w, h);
-  const c = jsQR(cx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: 'dontInvert' });
-  if (c && c.data) onCode(c.data.trim());
+  if (!v.videoWidth || sedangBaca || ts - lastScan < 200) return;
+  if (!detektor && typeof jsQR === 'undefined') {
+    if (!pesanSiap) { pesanSiap = true; tampil('err', 'Pemindai belum siap', 'Pastikan HP online, lalu muat ulang halaman'); }
+    return;
+  }
+  lastScan = ts; sedangBaca = true;
+  try {
+    let kode = '';
+    if (detektor) { const r = await detektor.detect(v); if (r.length) kode = r[0].rawValue; }
+    if (!kode && typeof jsQR !== 'undefined') {
+      const w = Math.min(v.videoWidth, 960), h = Math.round(w * v.videoHeight / v.videoWidth);
+      cv.width = w; cv.height = h; cx.drawImage(v, 0, 0, w, h);
+      const c = jsQR(cx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: 'attemptBoth' });
+      if (c) kode = c.data;
+    }
+    if (kode) onCode(kode.trim());
+  } catch (e) {}
+  sedangBaca = false;
 }
 
 // pengaturan
