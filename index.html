@@ -3,137 +3,204 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f6b4f">
 <title>Absensi QR</title>
 <style>
-:root{--bg:#0e1a2b;--panel:#162740;--line:#2a3f5e;--teks:#eef3fa;--redup:#93a6c2;--ok:#2bd48a;--warn:#ffb020;--err:#ff6b6b}
+:root{--bg:#f3f6f4;--card:#fff;--ink:#17241e;--mute:#5d6e65;--faint:#8a9a91;--line:#d5ded9;--ok:#0f6b4f;--out:#b45309;--err:#b3261e}
+@media (prefers-color-scheme:dark){:root{--bg:#101815;--card:#18231e;--ink:#e8f0ec;--mute:#9bb0a5;--faint:#6f857a;--line:#2a3a33;--ok:#3fb98f;--out:#f0a04b;--err:#f2837b}}
 *{box-sizing:border-box;margin:0}
-html,body{height:100%}
-body{background:var(--bg);color:var(--teks);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
-header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px}
-#jam{font-size:2rem;font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums}
-#tgl{color:var(--redup);font-size:.9rem}
-button{font:inherit;color:var(--teks);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
-button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
-main{flex:1;display:flex;flex-direction:column;gap:14px;padding:0 18px 18px;min-height:0}
-.cam{position:relative;flex:1;min-height:200px;background:#000;border-radius:16px;overflow:hidden;border:1px solid var(--line)}
+body{background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+main{max-width:560px;margin:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.top{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px}
+#jam{font-size:1.8rem;font-weight:600;font-variant-numeric:tabular-nums}
+#tgl{color:var(--mute);font-size:.85rem}
+.cam{position:relative;aspect-ratio:4/3;background:#000;border-radius:14px;overflow:hidden}
 video{width:100%;height:100%;object-fit:cover}
-.bingkai{position:absolute;inset:18% 18%;border:3px solid rgba(255,255,255,.85);border-radius:18px;pointer-events:none}
-#hasil{border-radius:16px;padding:18px;background:var(--panel);border:2px solid var(--line);text-align:center;min-height:110px;display:flex;flex-direction:column;justify-content:center}
-#hasil b{display:block;font-size:1.7rem;line-height:1.2}
-#hasil span{color:var(--redup)}
-#hasil.ok{border-color:var(--ok)}#hasil.ok b{color:var(--ok)}
-#hasil.warn{border-color:var(--warn)}#hasil.warn b{color:var(--warn)}
-#hasil.err{border-color:var(--err)}#hasil.err b{color:var(--err)}
-#q{color:var(--warn);font-size:.85rem;text-align:center;min-height:1.2em}
-dialog{margin:auto;width:min(92vw,440px);background:var(--panel);color:var(--teks);border:1px solid var(--line);border-radius:16px;padding:20px}
-dialog::backdrop{background:rgba(0,0,0,.6)}
-label{display:block;margin:12px 0 4px;color:var(--redup);font-size:.9rem}
-input,select{width:100%;font:inherit;color:var(--teks);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px}
-.baris{display:flex;gap:10px;margin-top:18px;justify-content:flex-end}
-.utama{background:var(--ok);color:#06231a;border-color:var(--ok);font-weight:700}
-@media (prefers-reduced-motion:no-preference){#hasil{transition:border-color .2s}}
+.frame{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:55%;aspect-ratio:1;border:3px solid #fff;border-radius:14px;opacity:.85;pointer-events:none}
+.hasil{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:16px 18px;min-height:104px}
+.hasil .k{color:var(--mute);font-size:.85rem}
+.hasil .n{font-size:1.5rem;font-weight:600;margin-top:2px}
+.hasil .s{font-size:.85rem;margin-top:2px;color:var(--mute)}
+.hasil.masuk{border-color:var(--ok)}.hasil.masuk .s{color:var(--ok)}
+.hasil.pulang{border-color:var(--out)}.hasil.pulang .s{color:var(--out)}
+.hasil.err{border-color:var(--err)}.hasil.err .n,.hasil.err .s{color:var(--err)}
+.tombol{display:flex;gap:10px;margin-top:12px}
+.tombol button{flex:1;padding:14px 10px;border:0;border-radius:12px;font:inherit;font-size:1.1rem;font-weight:600;color:#fff;cursor:pointer}
+.tombol .bm{background:var(--ok)}
+.tombol .bp{background:var(--out)}
+.sisa{font-size:.8rem;color:var(--mute);margin-top:10px;text-align:center}
+.daftar{background:var(--card);border-radius:14px;padding:14px 18px}
+.daftar h2{font-size:.95rem;font-weight:600;margin-bottom:6px}
+.baris{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:.95rem}
+.baris:last-child{border-bottom:0}
+.baris span:last-child{color:var(--mute);font-variant-numeric:tabular-nums}
+.baris .belum{color:var(--faint)}
+.kaki{display:flex;justify-content:space-between;gap:10px;font-size:.75rem;color:var(--faint);padding:0 4px}
+#antre{color:var(--out);font-size:.8rem;text-align:center;min-height:1.1em}
 </style>
 </head>
 <body>
-<header>
-  <div><div id="jam">--:--:--</div><div id="tgl"></div></div>
-</header>
 <main>
-  <div class="cam"><video id="v" playsinline muted></video><div class="bingkai"></div></div>
-  <div id="hasil"><b>Arahkan QR ke kamera</b><span>Absen masuk dicatat otomatis</span></div>
-  <div id="q" role="status"></div>
-  <div id="info" style="text-align:center;color:var(--redup);font-size:.75rem"></div>
+  <div class="top"><div id="jam">--:--:--</div><div id="tgl"></div></div>
+  <div class="cam"><video id="v" playsinline muted></video><div class="frame"></div></div>
+  <div class="hasil" id="hasil"></div>
+  <div id="antre" role="status"></div>
+  <div class="daftar"><h2>Absen hari ini</h2><div id="daftar"><div class="baris"><span class="belum">Memuat…</span></div></div></div>
+  <div class="kaki"><span>Data tersimpan di Google Sheets</span><span id="sync"></span></div>
+  <div class="kaki"><span id="info"></span></div>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script>
-const $ = s => document.querySelector(s);
+// ISI SEKALI: URL Web App dari Apps Script (berakhiran /exec)
+const URL_WEB_APP = 'PASTE_URL_WEB_APP_DI_SINI';
+// 'user' = kamera depan, 'environment' = kamera belakang
+const FACING = 'user';
+// Berapa detik pilihan Masuk/Pulang ditampilkan sebelum kembali ke kamera
+const WAKTU_PILIH = 10;
+
+const $ = id => document.getElementById(id);
 const ld = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const sv = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
-// ISI URL Web App Anda di bawah ini (satu kali saja). facing: 'user' = kamera depan, 'environment' = kamera belakang
-const cfg = { url: 'https://script.google.com/macros/s/AKfycbwMg5MhoNwhjnFHuLisY1sy8tjZ-zEnVJ56_RGoJUSOVXf9kfxn77t8MjzPbt_JmWjnig/exec', facing: 'user' };
-let queue = ld('absen_q', []);
-let last = { id: '', t: 0 }, busy = false, resetT;
+const siap = !URL_WEB_APP.startsWith('PASTE');
+const hhmm = d => d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }).replace('.', ':');
 
-// jam
+let queue = ld('absen_q', []), busy = false, last = { id: '', t: 0 };
+let resetT, pilihId = null, pilihSisa = 0, pilihTimer = null;
+let daftarNama = {};
+
 setInterval(() => {
   const d = new Date();
-  $('#jam').textContent = d.toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
-  $('#tgl').textContent = d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  $('jam').textContent = d.toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
+  $('tgl').textContent = d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }, 1000);
 
-function tampil(kelas, judul, sub) {
-  const h = $('#hasil'); h.className = kelas;
-  h.innerHTML = '<b></b><span></span>';
-  h.querySelector('b').textContent = judul;
-  h.querySelector('span').textContent = sub || '';
+/* Tampilan hasil */
+function tampil(kelas, ket, nama, sub, tetap) {
+  const h = $('hasil'); h.className = 'hasil ' + kelas;
+  h.innerHTML = '<div class="k"></div><div class="n"></div><div class="s"></div>';
+  h.children[0].textContent = ket; h.children[1].textContent = nama; h.children[2].textContent = sub || '';
   clearTimeout(resetT);
-  if (kelas !== 'wait') resetT = setTimeout(() => {
-    h.className = ''; h.innerHTML = '<b>Arahkan QR ke kamera</b><span>Absen masuk dicatat otomatis</span>';
-  }, 4000);
+  if (!tetap) resetT = setTimeout(diam, 5000);
 }
-function simpanAntrean() { sv('absen_q', queue); $('#q').textContent = queue.length ? queue.length + ' absen menunggu dikirim ke spreadsheet' : ''; }
+function diam() { tampil('', '', 'Arahkan QR ke kamera', 'Pilih Masuk atau Pulang setelah scan', true); }
+diam();
 
+/* Pilihan Masuk / Pulang setelah scan */
+function tanyaStatus(id) {
+  pilihId = id; pilihSisa = WAKTU_PILIH;
+  const h = $('hasil'); h.className = 'hasil';
+  h.innerHTML = '<div class="k">Pilih status</div><div class="n"></div><div class="tombol"><button class="bm" id="bm">Masuk</button><button class="bp" id="bp">Pulang</button></div><div class="sisa"></div>';
+  h.querySelector('.n').textContent = daftarNama[id] || id;
+  $('bm').onclick = () => pilih('masuk');
+  $('bp').onclick = () => pilih('pulang');
+  updSisa();
+  clearInterval(pilihTimer);
+  pilihTimer = setInterval(() => {
+    pilihSisa--;
+    if (pilihSisa <= 0) batal(); else updSisa();
+  }, 1000);
+}
+function updSisa() {
+  const s = document.querySelector('#hasil .sisa');
+  if (s) s.textContent = 'Batal otomatis dalam ' + pilihSisa + ' detik';
+}
+function batal() {
+  clearInterval(pilihTimer); pilihId = null; diam();
+}
+function pilih(status) {
+  const id = pilihId; if (!id) return;
+  clearInterval(pilihTimer); pilihId = null;
+  last = { id, t: Date.now() };
+  catat({ id, status, ts: new Date().toISOString() });
+}
+
+/* Kirim ke spreadsheet */
+simpanAntrean();
+function simpanAntrean() {
+  sv('absen_q', queue);
+  $('antre').textContent = queue.length ? queue.length + ' absen menunggu dikirim ke spreadsheet' : '';
+}
 async function kirim(item) {
   // tanpa header khusus agar tidak memicu preflight CORS di Apps Script
-  const r = await fetch(cfg.url, { method: 'POST', body: JSON.stringify({ id: item.id, ts: item.ts }) });
+  const r = await fetch(URL_WEB_APP, { method: 'POST', body: JSON.stringify(item) });
   return r.json();
 }
-
 function tanggapi(j) {
-  if (j.status === 'OK') tampil('ok', j.nama, 'Masuk pukul ' + String(j.jam).slice(0, 5));
-  else if (j.status === 'SUDAH') tampil('warn', j.nama, 'Sudah absen hari ini pukul ' + String(j.jam).slice(0, 5));
-  else tampil('err', j.pesan || 'Gagal mencatat', 'Coba lagi atau hubungi admin');
+  if (j.ok) {
+    const masuk = j.jenis === 'masuk';
+    tampil(masuk ? 'masuk' : 'pulang', (masuk ? 'Masuk pukul ' : 'Pulang pukul ') + j.jam, j.nama,
+      masuk ? 'Absen masuk tercatat' : 'Absen pulang tercatat');
+  } else {
+    tampil('err', 'Tidak tercatat', j.pesan || 'Gagal mencatat', 'Coba lagi atau hubungi admin');
+  }
 }
-
-async function onCode(id) {
-  const now = Date.now();
-  if (busy || (id === last.id && now - last.t < 5000)) return;
-  last = { id, t: now }; busy = true;
-  if (navigator.vibrate) navigator.vibrate(80);
-  if (!cfg.url || cfg.url.startsWith('PASTE')) { tampil('err', 'URL Web App belum diisi', 'Isi URL di baris atas script file index.html'); busy = false; return; }
-  tampil('wait', 'Memproses…', id);
-  const item = { id, ts: new Date().toISOString() };
-  try { tanggapi(await kirim(item)); }
-  catch { queue.push(item); simpanAntrean(); tampil('warn', 'Tersimpan di HP', 'Akan dikirim saat internet kembali'); }
-  busy = false;
+async function catat(item) {
+  tampil('', 'Memproses…', daftarNama[item.id] || item.id, '', true);
+  try { tanggapi(await kirim(item)); muatHari(); }
+  catch {
+    queue.push(item); simpanAntrean();
+    tampil('pulang', 'Tersimpan di HP', 'Belum ada internet', 'Akan dikirim otomatis nanti');
+  }
 }
-
 async function kirimAntrean() {
-  if (!queue.length || !cfg.url || !navigator.onLine) return;
+  if (!siap || !queue.length || !navigator.onLine) return;
   for (const item of [...queue]) {
-    try {
-      const j = await kirim(item);
-      if (j.status === 'TOKEN') break;           // token salah: simpan, jangan buang
-      queue = queue.filter(x => x !== item); simpanAntrean();
-    } catch { break; }
+    try { await kirim(item); queue = queue.filter(x => x !== item); simpanAntrean(); }
+    catch { break; }
   }
+  muatHari();
 }
-addEventListener('online', kirimAntrean); setInterval(kirimAntrean, 30000);
+addEventListener('online', kirimAntrean);
+setInterval(kirimAntrean, 30000);
 
-// kamera + pemindai
-let stream;
-async function mulaiKamera() {
-  if (stream) stream.getTracks().forEach(t => t.stop());
+/* Daftar absen hari ini, diambil dari spreadsheet */
+async function muatHari() {
+  if (!siap) { $('daftar').innerHTML = '<div class="baris"><span class="belum">URL Web App belum diisi</span></div>'; return; }
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: cfg.facing, width: { ideal: 1280 } }, audio: false });
-    const v = $('#v'); v.srcObject = stream; await v.play(); loop();
-  } catch (e) {
-    tampil('err', 'Kamera tidak bisa dibuka', 'Izinkan akses kamera di Chrome. Jika dibuka dari file, coba lewat HTTPS (GitHub Pages).');
-  }
+    const j = await (await fetch(URL_WEB_APP + '?aksi=hari')).json();
+    const box = $('daftar'); box.innerHTML = '';
+    daftarNama = {};
+    (j.rows || []).forEach(r => {
+      daftarNama[r.id] = r.nama;
+      const d = document.createElement('div'); d.className = 'baris';
+      const a = document.createElement('span'), b = document.createElement('span');
+      a.textContent = r.nama;
+      if (r.pulang) b.textContent = 'Masuk ' + r.masuk + ' · Pulang ' + r.pulang;
+      else if (r.masuk) b.textContent = 'Masuk ' + r.masuk;
+      else { b.textContent = 'Belum absen'; b.className = 'belum'; }
+      d.append(a, b); box.append(d);
+    });
+    if (!box.children.length) box.innerHTML = '<div class="baris"><span class="belum">Belum ada data</span></div>';
+    $('sync').textContent = 'Terakhir sinkron ' + hhmm(new Date());
+  } catch { $('sync').textContent = 'Gagal memuat daftar'; }
 }
+setInterval(muatHari, 60000);
+
+/* Kamera dan pemindai QR */
 const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
 const detektor = ('BarcodeDetector' in window) ? new BarcodeDetector({ formats: ['qr_code'] }) : null;
-$('#info').textContent = 'v4 · pemindai: ' + (detektor ? 'bawaan Chrome' : (typeof jsQR !== 'undefined' ? 'jsQR' : 'BELUM DIMUAT'));
-let lastScan = 0, sedangBaca = false, pesanSiap = false;
+$('info').textContent = 'v6 · pemindai: ' + (detektor ? 'bawaan Chrome' : (typeof jsQR !== 'undefined' ? 'jsQR' : 'BELUM DIMUAT'));
+let lastScan = 0, sedangBaca = false;
+
+function onCode(id) {
+  if (pilihId || busy) return;
+  if (id === last.id && Date.now() - last.t < 5000) return;
+  if (!siap) { tampil('err', 'Belum siap', 'URL Web App belum diisi', 'Isi baris URL_WEB_APP di file index.html'); return; }
+  tanyaStatus(id);
+}
+
+async function mulaiKamera() {
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: FACING, width: { ideal: 1280 } }, audio: false });
+    $('v').srcObject = s; await $('v').play(); loop();
+  } catch { tampil('err', 'Kamera tidak bisa dibuka', 'Izinkan akses kamera di Chrome', 'Buka lewat alamat HTTPS (misalnya GitHub Pages)', true); }
+}
 async function loop(ts) {
   requestAnimationFrame(loop);
-  const v = $('#v');
-  if (!v.videoWidth || sedangBaca || ts - lastScan < 200) return;
-  if (!detektor && typeof jsQR === 'undefined') {
-    if (!pesanSiap) { pesanSiap = true; tampil('err', 'Pemindai belum siap', 'Pastikan HP online, lalu muat ulang halaman'); }
-    return;
-  }
+  const v = $('v');
+  // kamera berhenti membaca saat pilihan Masuk/Pulang sedang tampil
+  if (!v.videoWidth || sedangBaca || pilihId || ts - lastScan < 200) return;
   lastScan = ts; sedangBaca = true;
   try {
     let kode = '';
@@ -149,7 +216,7 @@ async function loop(ts) {
   sedangBaca = false;
 }
 
-simpanAntrean(); mulaiKamera();
+mulaiKamera(); muatHari();
 </script>
 </body>
 </html>
